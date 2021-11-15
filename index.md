@@ -422,15 +422,192 @@ addAll(3,6)
 
 <br />
 
-##### 09 | 块级作用域：var缺陷以及为什么要引入let和const？
+#### 09 | 块级作用域：var缺陷以及为什么要引入let和const？
+
+> 正是由于 JavaScript 存在`变量提升`这种特性，从而导致了很多与直觉不符的代码，这也是 JavaScript 的一个重要设计缺陷。
 
 
+##### 主要内容
+- 探病因：分析为什么JS中会存在变量提升
+- 开药方：如何通过块级作用域和`let/const`修复这种设计缺陷
+
+##### 为什么JS中存在变量提升
+
+这需要从`作用域`讲起，作用域决定了变量与函数的可访问范围，控制着变量与函数的可见性和生命周期；
+
+> 其他语言普遍支持`块级作用域`，而JS在ES6之前，只支持`全局作用域`和`函数作用域`，不支持`块级作用域`
+
+> 和 Java、C/C++ 不同，ES6 之前是不支持块级作用域的，因为当初设计这门语言的时候，并没有想到 JavaScript 会火起来，所以只是按照最简单的方式来设计。没有了块级作用域，再把作用域内部的变量统一提升无疑是最快速、最简单的设计，不过这也直接导致了函数中的变量无论是在哪里声明的，在编译阶段都会被提取到执行上下文的变量环境中，所以这些变量在整个函数体内部的任何地方都是能被访问的，这也就是 JavaScript 中的变量提升。
+
+> 全局作用域的生命周期伴随着页面的整个生命周期，全局作用域中定义的对象可以在任何地方访问
+
+> 函数作用域就是在函数内部定义的变量或者函数，并且定义的变量或者函数只能在函数内部被访问。函数执行结束之后，函数内部定义的变量会被销毁。
+
+##### 变量提升带来的问题
+1. 变量容易在不被察觉的情况下被覆盖掉
+2. 本应销毁的变量没有被销毁
+
+```js
+// 1
+var myname = "极客时间"
+function showName(){
+    console.log(myname); // undefined
+    if(0){
+        var myname = "极客邦"
+    }
+    console.log(myname); // undefined
+}
+showName()
+
+// 2
+function foo() {
+    for(var i = 0; i < 8; i++) {
+    }
+    console.log(i); // 输出8， i并未被销毁
+}
+foo();
+
+```
 
 
+##### ES6 是如何解决变量提升带来的缺陷
+
+> ES6引入了`let/const`，让JS像其他语言一样支持`块级作用域`
+
+> 
+
+```js
+// ES5
+function varTest() {
+  var x = 1;
+  if (true) {
+    var x = 2;  // 同样的变量!
+    console.log(x);  // 2
+  }
+  console.log(x);  // 2
+}
+
+// ES6
+function letTest() {
+  let x = 1;
+  if (true) {
+    let x = 2;  // 不同的变量
+    console.log(x);  // 2
+  }
+  console.log(x);  // 1
+}
+
+```
+
+> 执行这段代码，其输出结果就和我们的预期是一致的。这是`因为 let 关键字是支持块级作用域`的，所以`在编译阶段，JavaScript 引擎并不会把 if 块中通过 let 声明的变量存放到变量环境中，这也就意味着在 if 块通过 let 声明的关键字，并不会提升到全函数可见`。所以在 if 块之内打印出来的值是 2，跳出语块之后，打印出来的值就是 1 了。`这种就非常符合我们的编程习惯了：作用域块内声明的变量不影响块外面的变量`。
+
+##### JavaScript 是如何支持块级作用域的
+
+> 在同一段代码中，ES6是如何做到既要支持变量提升特性，又要支持块级作用域呢？我们需要站在`执行上下文的角度`揭晓答案
+
+> JS引擎是通过`变量环境实现函数作用域`的，ES6又如何在函数作用域基础上实现块级作用域支持呢
 
 
+```js
+function foo(){
+    var a = 1
+    let b = 2
+    {
+      let b = 3
+      var c = 4
+      let d = 5
+      console.log(a) // 1
+      console.log(b) // 3
+    }
+    console.log(b) // 2
+    console.log(c) // 4
+    console.log(d) // Uncaught ReferenceError: d is not defined
+}   
+foo()
+
+
+function foo() {
+    let myname= '极客时间';
+    {
+        console.log(myname); // Uncaught RefrenceError: Cannot access 'myname' before initialization（Temperal Dead Zone）
+        let myname= '极客邦'
+    }
+}
+```
+
+以上面的代码为例，第一步是`编译并创建执行上下文`；
+
+![avatar](./assets/Block-Scope.webp)
+通过上图可以看出：
+- 函数内部通过`var`声明的变量，在编译阶段都被存放到变量环境中；
+- 通过`let`声明的变量，在编译阶段会被存放到`词法环境`中；
+- 在函数的作用域块内部，通过`let`声明的变量并没有被存放到词法环境中
+
+第二步是`继续执行代码`，执行到代码块时，变量环境中的`a`被设置为1，词法环境中的`b`被设置为2，此时函数的执行上下文如下：
+
+![avatar](./assets/Block-Scope-excute.webp)
+
+> 当进入函数的作用域块时，`作用域块中通过 let 声明的变量，会被存放在词法环境的一个单独的区域中`，这个区域中的变量并不影响作用域块外面的变量，比如在作用域外面声明了变量 b，在该作用域块内部也声明了变量 b，当执行到作用域内部时，它们都是独立的存在。
+
+> 在词法环境内部，维护了一个小型栈结构，栈底是函数最外层的变量，`进入一个作用域块后，就会把该作用域块内部的变量压到栈顶；当作用域执行完成之后，该作用域的信息就会从栈顶弹出，这就是词法环境的结构`。需要注意下，我这里所讲的变量是指通过 let 或者 const 声明的变量。
+
+> 再接下来，当执行到作用域块中的console.log(a)这行代码时，就需要在词法环境和变量环境中查找变量 a 的值了，具体查找方式是：`沿着词法环境的栈顶向下查询，如果在词法环境中的某个块中查找到了，就直接返回给 JavaScript 引擎，如果没有查找到，那么继续在变量环境中查找`。
+
+```js
+function foo(){
+    var a = 1
+    let b = 2
+    {
+      let b = 3
+      var c = 4
+      let d = 5
+      console.log(a) // 1
+      console.log(b) // 3
+    }
+    console.log(b) // 2
+    console.log(c) // 4
+    console.log(d) // Uncaught ReferenceError: d is not defined
+}   
+foo()
+
+
+function foo() {
+    let myname= '极客时间';
+    {
+        console.log(myname); // Uncaught RefrenceError: Cannot access 'myname' before initialization（Temperal Dead Zone）
+        let myname= '极客邦'
+    }
+}
+```
+
+![avatar](./assets/Block-Scope-3.webp)
+
+> 从上图你可以清晰地看出变量查找流程，不过要完整理解查找变量或者查找函数的流程，就涉及到作用域链了，这个我们会在下篇文章中做详细介绍。
+
+> 当作用域块执行结束之后，其内部定义的变量就会从词法环境的栈顶弹出，最终执行上下文如下图所示：
+
+![avatar](./assets/Block-Scope-4.webp)
+
+> 通过上面的分析，想必你已经理解了词法环境的结构和工作机制，`块级作用域就是通过词法环境的栈结构来实现的，而变量提升是通过变量环境来实现，通过这两者的结合，JavaScript 引擎也就同时支持了变量提升和块级作用域了`。
+
+##### 总结
+> 由于 JavaScript 的变量提升存在着`变量覆盖`、`变量污染`等设计缺陷，所以 ES6 引入了`块级作用域`关键字来解决这些问题。
+
+<br/>
 
 ---
+#### 10 | 作用域链和闭包 ：代码中出现相同的变量，JavaScript引擎是如何选择的？
+
+
+<br/>
+
+#### 11 | this：从JavaScript执行上下文的视角讲清楚this
+
+
+<br/>
+
+---
+
 #### 作者推荐学习资料
 1. 前端资料
     - [Web Fundamentals ](https://developers.google.com/web/fundamentals/)

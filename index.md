@@ -701,15 +701,98 @@ foo()
 
 ##### 闭包（Closure)
 
+了解了作用域链，接着我们就可以来聊聊闭包了
 
+```js
+function foo() {
+    var myName = "极客时间"
+    let test1 = 1
+    const test2 = 2
+    var innerBar = {
+        getName:function(){
+            console.log(test1)
+            return myName
+        },
+        setName:function(newName){
+            myName = newName
+        }
+    }
+    return innerBar
+}
+var bar = foo()
+bar.setName("极客邦")
+bar.getName()
+console.log(bar.getName())
+```
+
+首先我们看看当执行到 foo 函数内部的return innerBar这行代码时调用栈的情况，你可以参考下图：
+
+![avatar](./assets/closure-1.png)
+
+从上面的代码可以看出，innerBar 是一个对象，包含了 getName 和 setName 的两个方法（通常我们把对象内部的函数称为方法）。你可以看到，这两个方法都是在 foo 函数内部定义的，并且这两个方法内部都使用了 myName 和 test1 两个变量。
+
+`根据词法作用域的规则，内部函数 getName 和 setName 总是可以访问它们的外部函数 foo 中的变量`，所以当 innerBar 对象返回给全局变量 bar 时，虽然 foo 函数已经执行结束，但是 getName 和 setName 函数依然可以使用 foo 函数中的变量 myName 和 test1。所以当 foo 函数执行完成之后，其整个调用栈的状态如下图所示：
+
+![avatar](./assets/closure-2.png)
+
+可以看到foo函数执行完毕后从调用栈弹出，但是由于返回的`setName`和`getName`中都引用了`foo`函数内部的变量，所以`这两个变量依然保存在内存中`；我们把这称为`foo函数的闭包`，除了`setName`和`getName`外其他地方无法访问到；
+
+> 闭包：在JS中，根据词法作用域规则，内部函数总是可以访问外部函数中声明的变量，当通过调用`一个外部函数返回了一个内部函数后`，即使外部函数已经执行结束，但是由于`内部函数引用的外部函数的变量`依然保存在内存中，我们把`这些变量的集合称为闭包`
+
+那这些闭包是如何使用的呢？当执行到 bar.setName 方法中的myName = "极客邦"这句代码时，`JavaScript 引擎会沿着“当前执行上下文–>foo 函数闭包–> 全局执行上下文”的顺序来查找 myName 变量`，你可以参考下面的调用栈状态图：
+
+![avatar](./assets/closure-3.png)
+
+从图中可以看出，setName 的执行上下文中没有 myName 变量，foo 函数的闭包中包含了变量 myName，所以调用 setName 时，会修改 foo 闭包中的 myName 变量的值
+
+你也可以通过“开发者工具”来看看闭包的情况，打开 Chrome 的“开发者工具”，在 bar 函数任意地方打上断点，然后刷新页面，可以看到如下内容：
+
+![avatar](./assets/closure-4.jpg)
+
+从图中可以看出来，当调用 bar.getName 的时候，右边 Scope 项就体现出了作用域链的情况：Local 就是当前的 getName 函数的作用域，Closure(foo) 是指 foo 函数的闭包，最下面的 Global 就是指全局作用域，从“Local–>Closure(foo)–>Global”就是一个完整的作用域链。
+
+> 所以说，你以后也可以通过 Scope 来查看实际代码作用域链的情况，这样调试代码也会比较方便。
 
 ##### 闭包的回收
+
+> 接下来介绍下闭包是什么时候销毁的，闭包容易如果使用不正确，很容易造成`内存泄漏`，关注闭包如何回收可以让你正确使用闭包
+
+通常，`如果引用闭包的函数是一个全局变量，那么闭包会一直存在直到页面关闭`；但如果这个闭包以后不再使用的话，就会造成内存泄漏。
+
+如果`引用闭包的函数是个局部变量`，等函数销毁后，在下次 JavaScript 引擎执行垃圾回收时，判断闭包这块内容如果已经不再被使用了，那么 JavaScript 引擎的垃圾回收器就会回收这块内存。
+
+
+###### 使用闭包有个原则
+> 如果该闭包会一直使用，那么它可以作为全局变量而存在；但如果使用频率不高，而且占用内存又比较大的话，那就尽量让它成为一个局部变量。
+
 
 
 ##### 总结
 
+1. 首先，介绍了什么是作用域链，我们把通过作用域查找变量的链条称为作用域链；作用域链是通过词法作用域来确定的，而词法作用域反映了代码的结构。
+2. 其次，介绍了在块级作用域中是如何通过作用域链来查找变量的。最后，又基于作用域链和词法环境介绍了到底什么是闭包。
+3. 
 
 ##### 思考时间
+```js
+
+var bar = {
+    myName:"time.geekbang.com",
+    printName: function () {
+        console.log(myName)
+    }    
+}
+function foo() {
+    let myName = "极客时间"
+    return bar.printName
+}
+let myName = "极客邦"
+let _printName = foo()
+_printName() // 极客邦
+bar.printName() // 极客邦
+```
+
+![avatar](./assets/closure-5.jpg)
 
 
 

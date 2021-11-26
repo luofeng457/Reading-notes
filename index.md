@@ -802,10 +802,51 @@ bar.printName() // 极客邦
 
 
 
+---
 
 <br/>
 
 #### 11 | this：从JavaScript执行上下文的视角讲清楚this
+
+##### JS中的this是什么
+
+> `this`可以看做是与作用域链不同的另一种机制，用于支持对象内部的方法使用其内部的属性
+
+>执行上下文中包含了变量环境、词法环境、外部环境和this；`this和执行上下文是绑定的，每个执行上下文都有一个this。`
+
+![avatar](./assets/this.webp)
+
+因为执行上下文分为 —— `全局执行上下文`、`函数执行上下文`、`eval执行上下文`，所以this也分为三种 —— 全局中的this、函数中的this、eval中的this；
+
+##### this的设计缺陷及应对方案
+###### 嵌套函数中的 this 不会从外层函数中继承
+```js
+
+var myObj = {
+  name : "极客时间", 
+  showThis: function(){
+    console.log(this) // {name: '极客时间', showThis: ƒ}
+    function bar(){console.log(this)} // window, bar函数中的this指向全局window对象
+    bar()
+  }
+}
+myObj.showThis()
+```
+解决方案：
+1. 嵌套函数使用变量保存外部this供内部函数调用；
+2. 使用箭头函数（ES6 中的箭头函数并不会创建其自身的执行上下文，所以箭头函数中的 this 取决于它的外部函数）
+
+
+###### 普通函数中的 this 默认指向全局对象 window
+
+1. 使用`strict`严格模式，此时默认执行一个函数，其执行上下文中的this是undefined；
+2. 通过`call`等显示绑定和调用；
+
+
+##### 总结
+1. 函数当做对象的方法被调用时，函数中的this指向该对象
+2. 函数正常调用时，在严格模式下，this值为undefined，非严格模式下this指向全局对象window
+3. 嵌套函数中的this不会继承外层函数的this值（函数调用仅分为正常调用和对象方法的调用，嵌套函数内层不属于对象方法的调用，因此会指向全局的this；
 
 
 <br/>
